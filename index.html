@@ -36,7 +36,6 @@
 
       <fieldset>
         <legend>Método</legend>
-        <label><input type="radio" name="metodo" value="normas"> Normas y propiedades</label>
         <label><input type="radio" name="metodo" value="jacobi"> Jacobi</label>
         <label><input type="radio" name="metodo" value="seidel" checked> Gauss-Seidel</label>
         <label><input type="radio" name="metodo" value="ambos"> Comparar ambos</label>
@@ -75,24 +74,9 @@
         </label>
       </fieldset>
 
-      <label class="selector-ejemplo">
-        Ejemplo de la Parte 1
-        <select id="ejemplo-parte1">
-          <option value="vector">Vector (−2, 3, −5)</option>
-          <option value="matriz">Normas de la matriz 3×3</option>
-          <option value="condicion">Número de condición</option>
-          <option value="estricta">Estrictamente diagonal dominante</option>
-          <option value="dominante">Diagonal dominante</option>
-          <option value="no-dominante">No diagonal dominante</option>
-          <option value="definida">Definida positiva</option>
-          <option value="no-definida">No definida positiva</option>
-        </select>
-      </label>
-
       <div class="acciones">
         <button type="submit" class="principal">Calcular</button>
         <button type="button" id="ejemplo">Ejemplo iterativo</button>
-        <button type="button" id="ejemplo-normas">Cargar Parte 1</button>
         <button type="button" id="limpiar" class="secundario">Limpiar</button>
       </div>
 
@@ -114,7 +98,7 @@
     </form>
 
     <section id="resultado" class="resultado" aria-live="polite">
-      <p class="vacio">Escriba el sistema, cargue el ejemplo iterativo o un ejemplo de la Parte 1.</p>
+      <p class="vacio">Escriba el sistema o cargue el ejemplo iterativo.</p>
     </section>
   </main>
 
