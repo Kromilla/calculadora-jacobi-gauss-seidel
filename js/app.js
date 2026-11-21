@@ -590,8 +590,14 @@
     let n = Number(tamano.value);
     if (!Number.isInteger(n) || n < 2) n = 2;
     if (n > 8) n = 8;
+    // Leer la grilla ANTES de cambiar tamano, usando el tamaño real actual
+    let previo = null;
+    if (grilla.querySelector("input")) {
+      const oldSize = grilla.querySelectorAll("tbody tr").length;
+      tamano.value = String(oldSize);
+      previo = leerMatriz();
+    }
     tamano.value = String(n);
-    const previo = grilla.querySelector("input") ? leerMatriz() : null;
     construirGrilla(previo);
   });
 
