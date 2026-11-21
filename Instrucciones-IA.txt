@@ -56,6 +56,25 @@ Generar este documento, colocar en el encabezado del programa a los
 integrantes, la universidad, el profesor y la materia, subir el
 proyecto a un repositorio público de Git y desplegarlo en Vercel.
 
+Instrucción 4
+"agregale las normas" de Solución Sistemas de Ecuaciones
+Lineales-Parte 1.pptx para calcular. El texto escrito fue:
+
+agregale las normas D:\Users\WinterOS\Downloads\Solución Sistemas de Ecuaciones Lineales-Parte 1.pptx para calcular
+
+Instrucción 5
+"aplica las nomas 1, 2 y la de infinito"
+
+Instrucción 6
+"que se puedan elejir en la calculadora y genera el informe final,
+con los nombres, el link y avidencias y lo de los proms necesarios"
+
+En cada iteración se calculan la norma 1, la norma 2 y la norma
+infinito de la diferencia entre la iteración nueva y la anterior.
+El paro por defecto sigue siendo la norma infinito, para conservar
+el ejemplo del curso. Si en la interfaz se elige otra norma, el
+proceso se detiene cuando esa norma es menor que la tolerancia.
+
 
 2. Reglas tomadas de las presentaciones
 
@@ -89,10 +108,19 @@ Comunes a los dos métodos
   diagonal, cuando ese orden es posible.
 - Cada componente nueva se redondea a las cifras pedidas. En los
   ejemplos del curso, cuatro cifras. El empate se aleja de cero.
-- El proceso se detiene cuando la norma infinito de la diferencia
-  entre dos iteraciones consecutivas es menor que la tolerancia:
+- En cada iteración se calculan las tres normas de
+  Δx = x^(k) - x^(k-1):
+  norma 1: ||Δx||_1 = suma de los valores absolutos
+  norma 2: ||Δx||_2 = raíz de la suma de los cuadrados
+  norma infinito: ||Δx||_inf = máximo de los valores absolutos
+  Si el redondeo está activo, cada norma se redondea a las cifras
+  pedidas, con el mismo empate que se aleja de cero.
+- El paro por defecto es la norma infinito, que es la del curso:
   ||x^(k) - x^(k-1)||_inf < tolerancia
   En los ejemplos, tolerancia = 10^(-3).
+  Si se elige la norma 1 o la norma 2, el proceso se detiene cuando
+  esa norma es menor que la tolerancia. La tabla siempre muestra
+  las tres.
 - El método converge para cualquier x^(0) si se cumple alguna de
   estas condiciones:
   a) A es estrictamente diagonal dominante:
@@ -111,8 +139,11 @@ Comunes a los dos métodos
   para llevar a la diagonal los mayores coeficientes.
 - Jacobi calcula el vector nuevo completo con el vector anterior.
 - Gauss-Seidel sustituye cada componente en cuanto la obtiene.
-- El redondeo se aplica a cada componente nueva y al error mostrado.
-- La tabla de iteraciones muestra k, las componentes y ||Δx||_inf.
+- El redondeo se aplica a cada componente nueva y a las tres normas.
+- La tabla de iteraciones muestra k, las componentes, ||Δx||_1,
+  ||Δx||_2 y ||Δx||_inf.
+- La norma de paro se elige en la interfaz: 1, 2 o infinito.
+  La opción inicial, y la del ejemplo del curso, es la infinito.
 - El programa informa si A es estrictamente diagonal dominante,
   calcula rho(T) y concluye si la convergencia queda garantizada
   para cualquier aproximación inicial.
@@ -136,16 +167,21 @@ x^(0) = (0, 0, 0), cuatro cifras, tolerancia 0.001.
 
 Jacobi
 - Primera iteración: (0, 2, -1)
+- Normas de x^(1) - x^(0) = (0, 2, -1), con redondeo a 4 cifras:
+  norma 1 = 3.0000
+  norma 2 = 2.2361, porque raíz(4 + 1) = raíz(5)
+  norma infinito = 2.0000
+- El ejemplo usa el paro por defecto, la norma infinito.
 - Se detiene en k = 26
 - Aproximación: (1.0002, 1.9997, -0.9997)
-- Error: 0.0008
+- Error con la norma infinito: 0.0008
 - rho(T_J) = 0.7461
 
 Gauss-Seidel
 - Primera iteración: (0, 2, -0.3333)
 - Se detiene en k = 11
 - Aproximación: (0.9997, 1.9998, -0.9999)
-- Error: 0.0003
+- Error con la norma infinito: 0.0003
 - rho(T_G) = 0.4472
 
 Solución exacta: (1, 2, -1).

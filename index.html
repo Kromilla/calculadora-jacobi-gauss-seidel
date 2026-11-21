@@ -45,7 +45,7 @@
         <legend>Norma de paro</legend>
         <label><input type="radio" name="norma" value="1"> Norma 1 <span class="pista">suma de valores absolutos</span></label>
         <label><input type="radio" name="norma" value="2"> Norma 2 <span class="pista">raíz de la suma de cuadrados</span></label>
-        <label><input type="radio" name="norma" value="inf" checked> Norma infinito <span class="pista">el mayor valor absoluto</span></label>
+        <label><input type="radio" name="norma" value="inf" checked> Norma infinito <span class="pista">máximo de los valores absolutos</span></label>
       </fieldset>
 
       <div class="controles">
@@ -85,9 +85,9 @@
         <ul>
           <li>Jacobi arma el vector nuevo solo con la iteración anterior.</li>
           <li>Gauss-Seidel usa cada componente en cuanto la calcula.</li>
-          <li>En cada iteración se calculan ‖Δx‖₁, ‖Δx‖₂ y ‖Δx‖∞.</li>
+          <li>En cada iteración se calculan ‖Δx‖₁ (suma de valores absolutos), ‖Δx‖₂ (raíz de la suma de cuadrados) y ‖Δx‖∞ (máximo de los valores absolutos).</li>
           <li>El paro usa la norma elegida. Por defecto es ‖x⁽ᵏ⁾ − x⁽ᵏ⁻¹⁾‖∞ &lt; tolerancia.</li>
-          <li>El redondeo es a las cifras pedidas, con el empate alejándose de cero.</li>
+          <li>El redondeo es a las cifras pedidas, con el empate alejándose de cero. También se aplica a las tres normas.</li>
           <li>Hay convergencia para cualquier x⁰ si A es estrictamente diagonal dominante o si ρ(T) &lt; 1.</li>
           <li>T<sub>J</sub> = −D⁻¹(L + U) y T<sub>G</sub> = −(D + L)⁻¹U.</li>
         </ul>

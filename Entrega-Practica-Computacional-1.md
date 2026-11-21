@@ -36,13 +36,13 @@ Sitio en Vercel, despliegue permanente de producción:
 
 `https://calculadora-jacobi-gauss-seidel.vercel.app`
 
-Esa dirección abre la calculadora. El despliegue consultado en la CLI de Vercel está en estado Ready, con destino production, y el alias anterior es el de producción. También responde el alias `https://calculadora-jacobi-gauss-seidel-kromillas-projects.vercel.app`.
+Esa dirección abre la calculadora. Es el alias permanente de producción. También responde `https://calculadora-jacobi-gauss-seidel-kromillas-projects.vercel.app`.
 
 Para usarla en línea, abra el primer enlace en un navegador.
 
 Para abrirla en el computador, descargue el repositorio y abra `index.html`. Las carpetas `css` y `js` tienen que quedar junto a ese archivo.
 
-Al abrir la página, la grilla ya trae el ejemplo del curso, de tres ecuaciones. El método marcado es Gauss-Seidel. La norma de paro marcada es la norma infinito. También se pueden marcar la norma 1 y la norma 2. La tolerancia es 0.001, las cifras decimales son 4 y el máximo de iteraciones es 100. Están activas la reordenación de ecuaciones y el redondeo de cada componente nueva. El botón Ejemplo del curso vuelve a cargar ese sistema. Calcular ejecuta el método elegido. Se puede pasar a Jacobi o a la comparación de ambos. El tamaño admite de 2 a 8 ecuaciones.
+Al abrir `index.html`, la grilla ya trae el ejemplo del curso, de tres ecuaciones. El método marcado es Gauss-Seidel. La norma de paro marcada es la norma infinito. También se pueden marcar la norma 1 y la norma 2. La tolerancia es 0.001, las cifras decimales son 4 y el máximo de iteraciones es 100. Están activas la reordenación de ecuaciones y el redondeo de cada componente nueva. El botón Ejemplo del curso vuelve a cargar ese sistema. Calcular ejecuta el método elegido. Se puede pasar a Jacobi o a la comparación de ambos. El tamaño admite de 2 a 8 ecuaciones.
 
 El encabezado de la página muestra la Universidad del Magdalena, Análisis numérico, el profesor Marlon Hurtado y los tres integrantes.
 

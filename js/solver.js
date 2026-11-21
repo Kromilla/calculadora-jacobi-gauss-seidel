@@ -6,7 +6,8 @@
      de la diferencia entre dos iteraciones consecutivas.
    - El paro usa la norma elegida. Por defecto, la norma infinito:
      ||x^(k) - x^(k-1)||_inf < tolerancia.
-   - Redondeo half away from zero en cada componente nueva.
+   - Redondeo half away from zero en cada componente nueva
+     y en las tres normas, cuando el redondeo está activo.
    - Converge para cualquier x0 si A es estrictamente diagonal
      dominante o si el radio espectral de T es menor que 1.
    - Se reordenan ecuaciones para dejar en la diagonal el mayor
@@ -172,6 +173,13 @@
     return (esNegativo ? "-" : "") + entera + (decimal ? "." + decimal : "");
   }
 
+  function recortar(valor, cifras) {
+    const texto = formatear(valor, cifras, true);
+    if (!texto.includes(".")) return texto;
+    const limpio = texto.replace(/0+$/, "").replace(/\.$/, "");
+    return limpio === "-0" ? "0" : limpio;
+  }
+
   function clonarMatriz(matriz) {
     return matriz.map((fila) => fila.slice());
   }
@@ -219,13 +227,46 @@
         if (j !== i) fuera += absoluto(matriz[i][j]);
       }
       const margen = diagonal - fuera;
-      const cumple = diagonal > fuera;
+      const relacion = diagonal > fuera ? "mayor" : diagonal === fuera ? "igual" : "menor";
+      const cumple = relacion === "mayor";
       if (!cumple) estricta = false;
       if (peor === null || margen < peor) peor = margen;
       sumaDiagonal += diagonal;
-      filas.push({ indice: i, diagonal, fuera, margen, cumple });
+      filas.push({ indice: i, diagonal, fuera, margen, cumple, relacion });
     }
-    return { estricta, peor, sumaDiagonal, filas };
+    let tipo = "estricta";
+    if (filas.some((fila) => fila.relacion === "menor")) tipo = "no";
+    else if (filas.some((fila) => fila.relacion === "igual")) tipo = "dominante";
+    return { estricta, peor, sumaDiagonal, filas, tipo };
+  }
+
+  function describirDominancia(matriz) {
+    const info = margenDiagonal(matriz);
+    info.filas.forEach((fila, i) => {
+      const partes = [];
+      for (let j = 0; j < matriz.length; j += 1) {
+        if (j !== i) partes.push("|" + recortar(matriz[i][j], 8) + "|");
+      }
+      const simbolo = fila.relacion === "mayor" ? ">" : fila.relacion === "igual" ? "≥" : "≯";
+      fila.texto =
+        "Fila " +
+        (i + 1) +
+        ": |" +
+        recortar(matriz[i][i], 8) +
+        "| " +
+        simbolo +
+        " " +
+        (partes.join(" + ") || "0") +
+        " = " +
+        recortar(fila.fuera, 8);
+    });
+    info.frase =
+      info.tipo === "estricta"
+        ? "Por tanto, es estrictamente diagonal dominante."
+        : info.tipo === "dominante"
+          ? "Por tanto, es diagonal dominante. Hay igualdad en alguna fila, así que no es estrictamente diagonal dominante."
+          : "Por tanto, no es diagonal dominante.";
+    return info;
   }
 
   function reordenarEcuaciones(matriz, independiente) {

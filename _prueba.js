@@ -131,6 +131,30 @@ if (g.primera[2] !== "x₃^(1) = − (2/3) (0.0000) + (1/3) (2.0000) − 1 = -0.
   throw new Error("primera Seidel " + g.primera[2]);
 }
 if (j.historial.length !== 27 || g.historial.length !== 12) throw new Error("largo");
+if (salida.opciones.norma !== "inf") throw new Error("el paro por defecto debe ser la norma infinito");
+const dx = j.historial[1].normas;
+const textoNormas = [dx.n1, dx.n2, dx.inf].map((valor) => contexto.Metodos.formatear(valor, 4, true));
+if (
+  dx.n1 !== contexto.Metodos.parsear("3") ||
+  dx.n2 !== contexto.Metodos.parsear("2.2361") ||
+  dx.inf !== contexto.Metodos.parsear("2")
+) {
+  throw new Error(
+    "primera Jacobi, normas 1, 2 e infinito: " +
+      textoNormas.join(", ") +
+      " (esperado 3, sqrt(5) redondeado a 4 cifras y 2)"
+  );
+}
+if (j.historial[1].error !== dx.inf) throw new Error("el error del curso debe seguir siendo la norma infinito");
+const porNorma1 = resolver({ ...base, metodo: "jacobi", norma: "1" }).resultados[0];
+if (porNorma1.historial.length < j.historial.length) {
+  throw new Error("la norma 1 no debe detenerse antes que la norma infinito");
+}
+for (let i = 0; i < j.historial.length; i += 1) {
+  if (porNorma1.historial[i].x.join() !== j.historial[i].x.join()) {
+    throw new Error("la norma de paro cambió el vector de Jacobi en k=" + i);
+  }
+}
 
 const rot = autovalores([
   [0, -2],
