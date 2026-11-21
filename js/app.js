@@ -11,6 +11,57 @@
     b: ["4", "-3", "0"],
     x0: ["0", "0", "0"],
   };
+  const ejemplosParte1 = {
+    vector: {
+      nota: "Ejemplo de normas vectoriales: x⁰ = (−2, 3, −5). La matriz identidad completa la grilla; las normas pedidas son las de x⁰.",
+      A: [["1", "0", "0"], ["0", "1", "0"], ["0", "0", "1"]],
+      b: ["0", "0", "0"],
+      x0: ["-2", "3", "-5"],
+    },
+    matriz: {
+      nota: "Ejemplo de normas matriciales de la Parte 1.",
+      A: [["3", "-1", "0"], ["-1", "2", "-1"], ["0", "-1", "3"]],
+      b: ["0", "0", "0"],
+      x0: ["0", "0", "0"],
+    },
+    condicion: {
+      nota: "Ejemplo de número de condición con la norma infinito.",
+      A: [["2", "1"], ["2.001", "1"]],
+      b: ["0", "0"],
+      x0: ["0", "0"],
+    },
+    estricta: {
+      nota: "Ejemplo de matriz estrictamente diagonal dominante.",
+      A: [["-5", "1", "2"], ["-2", "6", "3"], ["3", "-6", "10"]],
+      b: ["0", "0", "0"],
+      x0: ["0", "0", "0"],
+    },
+    dominante: {
+      nota: "Ejemplo de matriz diagonal dominante, con igualdad en la fila 3.",
+      A: [["7", "5", "-1"], ["0", "6", "-5"], ["6", "-4", "10"]],
+      b: ["0", "0", "0"],
+      x0: ["0", "0", "0"],
+    },
+    "no-dominante": {
+      nota: "Ejemplo de matriz que no es diagonal dominante.",
+      A: [["3", "2", "-1"], ["5", "7", "-3"], ["-1", "2", "4"]],
+      b: ["0", "0", "0"],
+      x0: ["0", "0", "0"],
+    },
+    definida: {
+      nota: "Ejemplo de matriz simétrica definida positiva.",
+      A: [["2", "-1", "-1"], ["-1", "2", "1"], ["-1", "1", "4"]],
+      b: ["0", "0", "0"],
+      x0: ["1", "1", "1"],
+    },
+    "no-definida": {
+      nota: "Ejemplo de matriz simétrica que no es definida positiva, con x⁰ = (0, 1, 0).",
+      A: [["4", "-2", "1"], ["-2", "-2", "4"], ["1", "4", "1"]],
+      b: ["0", "0", "0"],
+      x0: ["0", "1", "0"],
+    },
+  };
+  let notaCargada = "";
 
   function nodo(tag, clase, texto) {
     const el = document.createElement(tag);
@@ -112,6 +163,28 @@
     return Metodos.formatear(valor, cifras, fijo);
   }
 
+  function fmtFlex(valor, cifras) {
+    const texto = fmt(valor, cifras, true);
+    if (!texto.includes(".")) return texto;
+    const limpio = texto.replace(/0+$/, "").replace(/\.$/, "");
+    return limpio === "-0" ? "0" : limpio;
+  }
+
+  function lineaNorma(simbolo, valor, radical, cifras) {
+    if (valor === null || valor === undefined) return simbolo + " no se pudo calcular.";
+    const numero = fmtFlex(valor, cifras);
+    if (radical && radical !== numero) return simbolo + " = " + radical + " = " + numero;
+    return simbolo + " = " + numero;
+  }
+
+  function sincronizarMetodo() {
+    const normas = metodoActivo() === "normas";
+    document.getElementById("campo-paro").disabled = normas;
+    document.getElementById("tolerancia").disabled = normas;
+    document.getElementById("maximo").disabled = normas;
+    document.getElementById("reordenar").disabled = normas;
+  }
+
   function tituloMetodo(metodo) {
     return metodo === "jacobi" ? "Método de Jacobi" : "Método de Gauss-Seidel";
   }
@@ -172,28 +245,19 @@
     seccion.append(nodo("h3", "", "Convergencia"));
     const lista = nodo("ul", "filas");
     const dom = analisis.dominancia;
-    lista.append(
-      nodo(
-        "li",
-        "",
-        "A es estrictamente diagonal dominante: " + (dom.estricta ? "sí." : "no.")
-      )
-    );
+    lista.append(nodo("li", "", dom.frase || (dom.estricta ? "Es estrictamente diagonal dominante." : "No es estrictamente diagonal dominante.")));
     dom.filas.forEach((fila) => {
+      if (fila.texto) {
+        lista.append(nodo("li", "", fila.texto));
+        return;
+      }
       const diag = fmt(fila.diagonal, 6, false);
       const fuera = fmt(fila.fuera, 6, false);
       lista.append(
         nodo(
           "li",
           "",
-          "Fila " +
-            (fila.indice + 1) +
-            ": |" +
-            diag +
-            "| " +
-            (fila.cumple ? "> " : "no supera a ") +
-            fuera +
-            "."
+          "Fila " + (fila.indice + 1) + ": |" + diag + "| " + (fila.cumple ? "> " : "no supera a ") + fuera + "."
         )
       );
     });
@@ -227,7 +291,9 @@
     } else if (rhoBien) {
       conclusion.classList.add("aviso");
       conclusion.textContent =
-        "A no es estrictamente diagonal dominante. Como ρ(T) < 1, el método igual converge para cualquier aproximación inicial.";
+        dom.tipo === "dominante"
+          ? "A es diagonal dominante, con igualdad en alguna fila. Como ρ(T) < 1, el método converge para cualquier aproximación inicial."
+          : "A no es estrictamente diagonal dominante. Como ρ(T) < 1, el método igual converge para cualquier aproximación inicial.";
     } else {
       conclusion.classList.add("falla");
       conclusion.textContent =
@@ -420,7 +486,133 @@
     return bloque;
   }
 
+  function claseLectura(lectura) {
+    if (lectura === "si" || lectura === "bien") return "estado";
+    if (lectura === "mal" || lectura === "no") return "estado aviso";
+    return "";
+  }
+
+  function pintarNormas(salida) {
+    const cifras = salida.opciones.decimales;
+    const p = salida.propiedades;
+    resultado.replaceChildren();
+    if (notaCargada) resultado.append(nodo("p", "estado aviso", notaCargada));
+    resultado.append(
+      nodo(
+        "p",
+        "estado",
+        "Cálculo de la Parte 1 con la matriz escrita: normas vectoriales, normas matriciales, número de condición, diagonal dominante y definida positiva."
+      )
+    );
+    const sistema = nodo("article", "bloque");
+    sistema.append(nodo("h2", "", "Matriz y vectores"));
+    sistema.append(nodo("p", "", "El orden de las ecuaciones es el escrito. La reordenación queda para Jacobi y Gauss-Seidel."));
+    const vista = nodo("div", "rejilla-datos");
+    const ladoA = nodo("div");
+    ladoA.append(nodo("h3", "", "Matriz A"));
+    ladoA.append(matrizHtml(salida.matriz, Math.max(cifras, 4)));
+    const ladoB = nodo("div");
+    ladoB.append(nodo("h3", "", "Vector b"));
+    ladoB.append(vectorHtml(salida.independiente, cifras));
+    ladoB.append(nodo("h3", "", "Vector x⁰"));
+    ladoB.append(vectorHtml(salida.inicial, cifras));
+    vista.append(ladoA, ladoB);
+    sistema.append(vista);
+    resultado.append(sistema);
+
+    const vectores = nodo("article", "bloque");
+    vectores.append(nodo("h2", "", "Normas vectoriales"));
+    p.vectores.forEach((vector) => {
+      vectores.append(nodo("h3", "", vector.nombre));
+      const pasos = nodo("ul", "pasos");
+      vector.pasos.forEach((paso) => pasos.append(nodo("li", "", paso)));
+      vectores.append(pasos);
+      vectores.append(nodo("p", "", lineaNorma("‖" + vector.nombre + "‖₁", vector.norma1, null, cifras)));
+      vectores.append(nodo("p", "", lineaNorma("‖" + vector.nombre + "‖₂", vector.norma2, vector.radical2, cifras)));
+      vectores.append(nodo("p", "", lineaNorma("‖" + vector.nombre + "‖∞", vector.normaInf, null, cifras)));
+    });
+    resultado.append(vectores);
+
+    const matricial = nodo("article", "bloque");
+    matricial.append(nodo("h2", "", "Normas matriciales"));
+    const pasosM = nodo("ul", "pasos");
+    p.pasos.forEach((paso) => pasosM.append(nodo("li", "", paso)));
+    matricial.append(pasosM);
+    matricial.append(nodo("h3", "", "AᵀA"));
+    matricial.append(matrizHtml(p.ata, Math.max(cifras, 4)));
+    if (p.autovaloresATA.length) {
+      matricial.append(nodo("p", "", "Autovalores de AᵀA: " + p.autovaloresATA.map(textoAutovalor).join(", ") + "."));
+    }
+    if (p.autovaloresA.length) {
+      matricial.append(nodo("p", "", "Autovalores de A: " + p.autovaloresA.map(textoAutovalor).join(", ") + "."));
+    }
+    const desigualdades = nodo("ul", "filas");
+    p.desigualdades.forEach((linea) => desigualdades.append(nodo("li", "", linea)));
+    matricial.append(desigualdades);
+    resultado.append(matricial);
+
+    const condicion = nodo("article", "bloque");
+    condicion.append(nodo("h2", "", "Número de condición"));
+    condicion.append(nodo("p", "", "det(A) = " + fmtFlex(p.determinante, Math.max(cifras, 3)) + "."));
+    if (p.singular) condicion.append(nodo("p", "estado aviso", p.fraseSingular));
+    else {
+      condicion.append(nodo("h3", "", "A⁻¹"));
+      condicion.append(matrizHtml(p.inversa, Math.max(cifras, 4)));
+      p.kappas.forEach((kappa) => condicion.append(nodo("p", claseLectura(kappa.lectura), kappa.frase)));
+    }
+    resultado.append(condicion);
+
+    const dominante = nodo("article", "bloque");
+    dominante.append(nodo("h2", "", "Diagonal dominante"));
+    const filasDom = nodo("ul", "filas");
+    p.dominancia.filas.forEach((fila) => filasDom.append(nodo("li", "", fila.texto)));
+    dominante.append(filasDom);
+    dominante.append(nodo("p", p.dominancia.tipo === "estricta" ? "estado" : "estado aviso", p.dominancia.frase));
+    resultado.append(dominante);
+
+    const definida = nodo("article", "bloque");
+    definida.append(nodo("h2", "", "Matriz definida positiva"));
+    definida.append(nodo("p", claseLectura(p.definida.lectura) || "", p.definida.frase));
+    if (p.definida.menores.length) {
+      const menores = nodo("ul", "filas");
+      p.definida.menores.forEach((menor) => menores.append(nodo("li", "", menor.texto)));
+      definida.append(menores);
+    }
+    [p.definida.diagonal, p.definida.mayor, p.definida.forma, p.definida.autovalores]
+      .filter(Boolean)
+      .forEach((texto) => definida.append(nodo("p", "", texto)));
+    if (p.definida.pares.length) {
+      const pares = nodo("ul", "filas");
+      p.definida.pares.forEach((par) => pares.append(nodo("li", "", par)));
+      definida.append(pares);
+    }
+    resultado.append(definida);
+  }
+
+  function bloqueResumen(salida) {
+    const p = salida.propiedades;
+    if (!p) return null;
+    const cifras = salida.opciones.decimales;
+    const bloque = nodo("article", "bloque");
+    bloque.append(nodo("h2", "", "Propiedades de A, Parte 1"));
+    const lista = nodo("ul", "filas");
+    lista.append(nodo("li", "", lineaNorma("‖A‖₁", p.norma1, null, cifras)));
+    lista.append(nodo("li", "", lineaNorma("‖A‖∞", p.normaInf, null, cifras)));
+    lista.append(nodo("li", "", lineaNorma("‖A‖F", p.normaF, p.radicalF, cifras)));
+    lista.append(nodo("li", "", lineaNorma("‖A‖₂", p.norma2, null, cifras)));
+    if (p.kappas[0]) lista.append(nodo("li", "", p.kappas[0].frase));
+    else if (p.fraseSingular) lista.append(nodo("li", "", p.fraseSingular));
+    lista.append(nodo("li", "", p.dominancia.frase));
+    lista.append(nodo("li", "", p.definida.frase));
+    bloque.append(lista);
+    return bloque;
+  }
+
   function pintar(salida) {
+    if (salida.modo === "normas") {
+      pintarNormas(salida);
+      return;
+    }
     resultado.replaceChildren();
     if (salida.advertenciaRedondeo) {
       const aviso = nodo(
@@ -455,6 +647,8 @@
     vista.append(ladoA, ladoB);
     sistema.append(vista);
     resultado.append(sistema);
+    const resumen = bloqueResumen(salida);
+    if (resumen) resultado.append(resumen);
 
     if (salida.resultados.length === 2) {
       const comparacion = nodo("article", "bloque");
@@ -561,7 +755,12 @@
 
   document.getElementById("panel").addEventListener("submit", (evento) => {
     evento.preventDefault();
+    notaCargada = "";
     calcular();
+  });
+
+  document.querySelectorAll('input[name="metodo"]').forEach((entrada) => {
+    entrada.addEventListener("change", sincronizarMetodo);
   });
 
   tamano.addEventListener("change", () => {
@@ -583,6 +782,21 @@
     document.getElementById("redondear").checked = true;
     document.querySelector('input[name="metodo"][value="ambos"]').checked = true;
     document.querySelector('input[name="norma"][value="inf"]').checked = true;
+    notaCargada = "";
+    sincronizarMetodo();
+    calcular();
+  });
+
+  document.getElementById("ejemplo-normas").addEventListener("click", () => {
+    const clave = document.getElementById("ejemplo-parte1").value;
+    const ejemplo = ejemplosParte1[clave];
+    tamano.value = String(ejemplo.A.length);
+    construirGrilla(ejemplo);
+    document.getElementById("decimales").value = "4";
+    document.getElementById("redondear").checked = true;
+    document.querySelector('input[name="metodo"][value="normas"]').checked = true;
+    notaCargada = ejemplo.nota;
+    sincronizarMetodo();
     calcular();
   });
 
@@ -597,7 +811,8 @@
       b: ["", "", ""],
       x0: ["0", "0", "0"],
     });
-    resultado.replaceChildren(nodo("p", "vacio", "Escriba el sistema o cargue el ejemplo del curso."));
+    notaCargada = "";
+    resultado.replaceChildren(nodo("p", "vacio", "Escriba el sistema, cargue el ejemplo iterativo o un ejemplo de la Parte 1."));
   });
 
   construirGrilla(ejemploCurso);

@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Calculadora Jacobi y Gauss-Seidel</title>
+  <title>Calculadora de normas, Jacobi y Gauss-Seidel</title>
   <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
   <header class="cabecera">
     <p class="materia">Universidad del Magdalena · Análisis numérico</p>
-    <h1>Jacobi y Gauss-Seidel</h1>
+    <h1>Normas, Jacobi y Gauss-Seidel</h1>
     <p class="profesor">Profesor Marlon Hurtado</p>
     <ul class="integrantes">
       <li>Carlos Alfredo Ibañez Ortiz</li>
@@ -17,9 +17,9 @@
       <li>Yineth Ávila Villalobos</li>
     </ul>
     <p class="bajada">
-      Resuelve Ax = b con las reglas del curso: reordena ecuaciones,
-      redondea cada componente nueva y se detiene con la norma elegida.
-      Por defecto, la norma infinito.
+      Calcula las normas y propiedades de la Parte 1 y resuelve Ax = b
+      con Jacobi y Gauss-Seidel. El paro iterativo usa la norma elegida;
+      por defecto, la norma infinito.
     </p>
   </header>
 
@@ -36,12 +36,13 @@
 
       <fieldset>
         <legend>Método</legend>
+        <label><input type="radio" name="metodo" value="normas"> Normas y propiedades</label>
         <label><input type="radio" name="metodo" value="jacobi"> Jacobi</label>
         <label><input type="radio" name="metodo" value="seidel" checked> Gauss-Seidel</label>
         <label><input type="radio" name="metodo" value="ambos"> Comparar ambos</label>
       </fieldset>
 
-      <fieldset>
+      <fieldset id="campo-paro">
         <legend>Norma de paro</legend>
         <label><input type="radio" name="norma" value="1"> Norma 1 <span class="pista">suma de valores absolutos</span></label>
         <label><input type="radio" name="norma" value="2"> Norma 2 <span class="pista">raíz de la suma de cuadrados</span></label>
@@ -74,9 +75,24 @@
         </label>
       </fieldset>
 
+      <label class="selector-ejemplo">
+        Ejemplo de la Parte 1
+        <select id="ejemplo-parte1">
+          <option value="vector">Vector (−2, 3, −5)</option>
+          <option value="matriz">Normas de la matriz 3×3</option>
+          <option value="condicion">Número de condición</option>
+          <option value="estricta">Estrictamente diagonal dominante</option>
+          <option value="dominante">Diagonal dominante</option>
+          <option value="no-dominante">No diagonal dominante</option>
+          <option value="definida">Definida positiva</option>
+          <option value="no-definida">No definida positiva</option>
+        </select>
+      </label>
+
       <div class="acciones">
         <button type="submit" class="principal">Calcular</button>
-        <button type="button" id="ejemplo">Ejemplo del curso</button>
+        <button type="button" id="ejemplo">Ejemplo iterativo</button>
+        <button type="button" id="ejemplo-normas">Cargar Parte 1</button>
         <button type="button" id="limpiar" class="secundario">Limpiar</button>
       </div>
 
@@ -88,14 +104,17 @@
           <li>En cada iteración se calculan ‖Δx‖₁ (suma de valores absolutos), ‖Δx‖₂ (raíz de la suma de cuadrados) y ‖Δx‖∞ (máximo de los valores absolutos).</li>
           <li>El paro usa la norma elegida. Por defecto es ‖x⁽ᵏ⁾ − x⁽ᵏ⁻¹⁾‖∞ &lt; tolerancia.</li>
           <li>El redondeo es a las cifras pedidas, con el empate alejándose de cero. También se aplica a las tres normas.</li>
-          <li>Hay convergencia para cualquier x⁰ si A es estrictamente diagonal dominante o si ρ(T) &lt; 1.</li>
+          <li>Hay convergencia para cualquier x⁰ si A es estrictamente diagonal dominante o si ρ(T) &lt; 1. Si solo hay igualdad, es diagonal dominante y esa garantía no se aplica.</li>
+          <li>‖A‖₁ es el máximo de las sumas de columnas, ‖A‖∞ el de las filas, ‖A‖F la raíz de la suma de cuadrados y ‖A‖₂ = √ρ(AᵀA). Si A es simétrica, ‖A‖₂ = ρ(A).</li>
+          <li>κ(A) = ‖A‖ ‖A⁻¹‖. Cerca de 1, bien condicionada; κ ≫ 1, mal condicionada.</li>
+          <li>Una matriz simétrica es definida positiva si todos sus menores principales son positivos.</li>
           <li>T<sub>J</sub> = −D⁻¹(L + U) y T<sub>G</sub> = −(D + L)⁻¹U.</li>
         </ul>
       </details>
     </form>
 
     <section id="resultado" class="resultado" aria-live="polite">
-      <p class="vacio">Escriba el sistema o cargue el ejemplo del curso.</p>
+      <p class="vacio">Escriba el sistema, cargue el ejemplo iterativo o un ejemplo de la Parte 1.</p>
     </section>
   </main>
 

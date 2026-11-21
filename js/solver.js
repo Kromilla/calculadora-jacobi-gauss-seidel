@@ -11,7 +11,10 @@
    - Converge para cualquier x0 si A es estrictamente diagonal
      dominante o si el radio espectral de T es menor que 1.
    - Se reordenan ecuaciones para dejar en la diagonal el mayor
-     valor absoluto de cada fila, cuando eso es posible. */
+     valor absoluto de cada fila, cuando eso es posible.
+   Parte 1, además de esas normas vectoriales: normas matriciales
+   1, infinito, Frobenius y espectral; número de condición;
+   diagonal dominante estricta o no; definida positiva por Sylvester. */
 (function (root) {
   const ESCALA = 24;
   const UNO = 10n ** BigInt(ESCALA);
@@ -630,6 +633,545 @@
     return { historial, estado };
   }
 
+  function raiz(valor) {
+    if (valor <= 0n) return 0n;
+    return raizEntera(valor * UNO);
+  }
+
+  function radicalDeSuma(sumaCuadrados) {
+    if (sumaCuadrados % UNO !== 0n) return null;
+    const entero = sumaCuadrados / UNO;
+    if (entero > 1000000n) return null;
+    let x = entero;
+    if (x > 1n) {
+      let y = (x + 1n) / 2n;
+      while (y < x) {
+        x = y;
+        y = (x + entero / x) / 2n;
+      }
+    }
+    if (x * x === entero) return null;
+    return "√" + entero.toString();
+  }
+
+  function limpiarAutovalor(valor) {
+    let re = valor.re;
+    let im = valor.im;
+    if (!Number.isFinite(re) || !Number.isFinite(im)) return valor;
+    if (Math.abs(im) <= 1e-8 * (Math.abs(re) + 1)) im = 0;
+    if (Math.abs(re - Math.round(re)) <= 1e-8) re = Math.round(re);
+    return { re, im };
+  }
+
+  function limpiarReal(numero) {
+    if (!Number.isFinite(numero)) return numero;
+    const redondo = Math.round(numero);
+    if (Math.abs(numero - redondo) <= 1e-8) return redondo;
+    return numero;
+  }
+
+  function desdeNumero(numero) {
+    if (!Number.isFinite(numero)) return null;
+    const magnitud = Math.abs(numero);
+    if (magnitud === 0) return 0n;
+    if (magnitud > 1e12) return null;
+    try {
+      const valor = parsear(magnitud.toPrecision(15));
+      return numero < 0 ? -valor : valor;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function rhoDe(valores) {
+    if (!valores.length) return null;
+    return valores.reduce((maximo, valor) => Math.max(maximo, Math.hypot(valor.re, valor.im)), 0);
+  }
+
+  function textoLambda(valor) {
+    if (valor.im === 0) {
+      const fijo = desdeNumero(valor.re);
+      return fijo === null ? String(valor.re) : recortar(fijo, 8);
+    }
+    const real = desdeNumero(valor.re);
+    const imag = desdeNumero(Math.abs(valor.im));
+    const signo = valor.im < 0 ? " − " : " + ";
+    return (real === null ? String(valor.re) : recortar(real, 8)) + signo + (imag === null ? String(Math.abs(valor.im)) : recortar(imag, 8)) + "i";
+  }
+
+  function transpuesta(matriz) {
+    return matriz[0].map((_, columna) => matriz.map((fila) => fila[columna]));
+  }
+
+  function productoMatrices(izquierda, derecha) {
+    return izquierda.map((fila) =>
+      derecha[0].map((_, columna) => {
+        let suma = 0n;
+        for (let k = 0; k < derecha.length; k += 1) suma = sumar(suma, multiplicar(fila[k], derecha[k][columna]));
+        return suma;
+      })
+    );
+  }
+
+  function esSimetrica(matriz) {
+    for (let i = 0; i < matriz.length; i += 1) {
+      for (let j = 0; j < i; j += 1) {
+        if (matriz[i][j] !== matriz[j][i]) return false;
+      }
+    }
+    return true;
+  }
+
+  function racional(numerador, denominador) {
+    if (denominador === 0n) throw errorUsuario("División entre cero.");
+    let n = numerador;
+    let d = denominador;
+    if (d < 0n) {
+      n = -n;
+      d = -d;
+    }
+    const comun = mcd(n, d);
+    return { n: n / comun, d: d / comun };
+  }
+
+  function rSuma(a, b) {
+    return racional(a.n * b.d + b.n * a.d, a.d * b.d);
+  }
+
+  function rResta(a, b) {
+    return racional(a.n * b.d - b.n * a.d, a.d * b.d);
+  }
+
+  function rMul(a, b) {
+    return racional(a.n * b.n, a.d * b.d);
+  }
+
+  function rDiv(a, b) {
+    if (b.n === 0n) throw errorUsuario("División entre cero.");
+    return racional(a.n * b.d, a.d * b.n);
+  }
+
+  function aRacional(valor) {
+    return racional(valor, UNO);
+  }
+
+  function racionalAFijo(fraccion) {
+    if (fraccion.n === 0n) return 0n;
+    const num = fraccion.n * UNO;
+    const negativo = (num < 0n) !== (fraccion.d < 0n);
+    const mag = absoluto(num);
+    const den = absoluto(fraccion.d);
+    const cociente = mag / den;
+    const residuo = mag % den;
+    const ajustado = residuo * 2n >= den ? cociente + 1n : cociente;
+    return negativo ? -ajustado : ajustado;
+  }
+
+  function determinanteMatriz(matriz) {
+    const n = matriz.length;
+    if (n === 1) return matriz[0][0];
+    const a = matriz.map((fila) => fila.map(aRacional));
+    let det = racional(1n, 1n);
+    for (let k = 0; k < n; k += 1) {
+      let pivote = k;
+      if (a[k][k].n === 0n) {
+        for (let i = k + 1; i < n; i += 1) {
+          if (a[i][k].n !== 0n) {
+            pivote = i;
+            break;
+          }
+        }
+      }
+      if (a[pivote][k].n === 0n) return 0n;
+      if (pivote !== k) {
+        const temporal = a[k];
+        a[k] = a[pivote];
+        a[pivote] = temporal;
+        det = rMul(det, racional(-1n, 1n));
+      }
+      det = rMul(det, a[k][k]);
+      for (let i = k + 1; i < n; i += 1) {
+        const factor = rDiv(a[i][k], a[k][k]);
+        for (let j = k; j < n; j += 1) a[i][j] = rResta(a[i][j], rMul(factor, a[k][j]));
+      }
+    }
+    return racionalAFijo(det);
+  }
+
+  function invertirMatriz(matriz) {
+    const n = matriz.length;
+    const a = matriz.map((fila, i) => {
+      const extendida = fila.map(aRacional);
+      for (let j = 0; j < n; j += 1) extendida.push(i === j ? racional(1n, 1n) : racional(0n, 1n));
+      return extendida;
+    });
+    for (let k = 0; k < n; k += 1) {
+      let pivote = k;
+      if (a[k][k].n === 0n) {
+        for (let i = k + 1; i < n; i += 1) {
+          if (a[i][k].n !== 0n) {
+            pivote = i;
+            break;
+          }
+        }
+      }
+      if (a[pivote][k].n === 0n) return null;
+      if (pivote !== k) {
+        const temporal = a[k];
+        a[k] = a[pivote];
+        a[pivote] = temporal;
+      }
+      const divisor = a[k][k];
+      for (let j = k; j < 2 * n; j += 1) a[k][j] = rDiv(a[k][j], divisor);
+      for (let i = 0; i < n; i += 1) {
+        if (i === k || a[i][k].n === 0n) continue;
+        const factor = a[i][k];
+        for (let j = k; j < 2 * n; j += 1) a[i][j] = rResta(a[i][j], rMul(factor, a[k][j]));
+      }
+    }
+    return a.map((fila) => fila.slice(n).map(racionalAFijo));
+  }
+
+  function principal(matriz, k) {
+    return matriz.slice(0, k).map((fila) => fila.slice(0, k));
+  }
+
+  function formaCuadratica(matriz, vector) {
+    let total = 0n;
+    for (let i = 0; i < matriz.length; i += 1) {
+      let producto = 0n;
+      for (let j = 0; j < matriz.length; j += 1) producto = sumar(producto, multiplicar(matriz[i][j], vector[j]));
+      total = sumar(total, multiplicar(vector[i], producto));
+    }
+    return total;
+  }
+
+  function calcularNormas(matriz, cifras) {
+    const n = matriz.length;
+    const txt = (valor) => recortar(valor, cifras);
+    const columnas = [];
+    let norma1 = null;
+    for (let j = 0; j < n; j += 1) {
+      let suma = 0n;
+      const partes = [];
+      for (let i = 0; i < n; i += 1) {
+        suma += absoluto(matriz[i][j]);
+        partes.push("|" + txt(matriz[i][j]) + "|");
+      }
+      if (norma1 === null || suma > norma1) norma1 = suma;
+      columnas.push({
+        indice: j,
+        suma,
+        texto: "Columna " + (j + 1) + ": " + partes.join(" + ") + " = " + txt(suma),
+      });
+    }
+    const filas = [];
+    let normaInf = null;
+    for (let i = 0; i < n; i += 1) {
+      let suma = 0n;
+      const partes = [];
+      for (let j = 0; j < n; j += 1) {
+        suma += absoluto(matriz[i][j]);
+        partes.push("|" + txt(matriz[i][j]) + "|");
+      }
+      if (normaInf === null || suma > normaInf) normaInf = suma;
+      filas.push({
+        indice: i,
+        suma,
+        texto: "Fila " + (i + 1) + ": " + partes.join(" + ") + " = " + txt(suma),
+      });
+    }
+    const cuadrados = [];
+    let sumaCuadrados = 0n;
+    for (let i = 0; i < n; i += 1) {
+      for (let j = 0; j < n; j += 1) {
+        const cuadrado = multiplicar(matriz[i][j], matriz[i][j]);
+        cuadrados.push(cuadrado);
+        sumaCuadrados += cuadrado;
+      }
+    }
+    const normaF = raiz(sumaCuadrados);
+    const radicalF = radicalDeSuma(sumaCuadrados);
+    const simetrica = esSimetrica(matriz);
+    const ata = productoMatrices(transpuesta(matriz), matriz);
+    const autovaloresATA = autovalores(ata.map((fila) => fila.map(aNumero))).map(limpiarAutovalor);
+    const autovaloresA = autovalores(matriz.map((fila) => fila.map(aNumero))).map(limpiarAutovalor);
+    const rhoATA = autovaloresATA.length === n ? limpiarReal(rhoDe(autovaloresATA)) : null;
+    const rhoA = autovaloresA.length === n ? limpiarReal(rhoDe(autovaloresA)) : null;
+    let norma2 = rhoATA === null ? null : desdeNumero(Math.sqrt(rhoATA));
+    if (simetrica && rhoA !== null) {
+      const porRadio = desdeNumero(rhoA);
+      if (porRadio !== null && (norma2 === null || absoluto(porRadio - norma2) <= UNO / 1000n)) norma2 = porRadio;
+    }
+    const pasos = [
+      ...columnas.map((columna) => columna.texto),
+      "‖A‖₁ = max{" + columnas.map((columna) => txt(columna.suma)).join(", ") + "} = " + txt(norma1),
+      ...filas.map((fila) => fila.texto),
+      "‖A‖∞ = max{" + filas.map((fila) => txt(fila.suma)).join(", ") + "} = " + txt(normaInf),
+      "‖A‖F = √(" +
+        cuadrados.map((cuadrado) => txt(cuadrado)).join(" + ") +
+        ") = " +
+        (radicalF || txt(normaF)),
+    ];
+    if (simetrica) pasos.push("A es simétrica, así que Aᵀ = A.");
+    else pasos.push("‖A‖₂ = √ρ(AᵀA).");
+    if (autovaloresATA.length === n) {
+      pasos.push("Autovalores de AᵀA: " + autovaloresATA.map(textoLambda).join(", ") + ".");
+      pasos.push("ρ(AᵀA) = max{|λᵢ|} = " + (rhoATA === null ? "—" : txt(desdeNumero(rhoATA))));
+    }
+    if (norma2 !== null) pasos.push("‖A‖₂ = " + txt(norma2) + ".");
+    if (simetrica && rhoA !== null) pasos.push("Como A es simétrica, ‖A‖₂ = ρ(A) = " + txt(desdeNumero(rhoA)) + ".");
+    const desigualdades = [];
+    [
+      ["₁", norma1],
+      ["∞", normaInf],
+      ["F", normaF],
+      ["₂", norma2],
+    ].forEach(([simbolo, norma]) => {
+      if (rhoA === null || norma === null) return;
+      const cabe = aNumero(norma) + 1e-6 >= rhoA;
+      desigualdades.push(
+        "ρ(A) = " +
+          txt(desdeNumero(rhoA)) +
+          (cabe ? " ≤ " : " comparado con ") +
+          "‖A‖" +
+          simbolo +
+          " = " +
+          txt(norma)
+      );
+    });
+    return {
+      norma1,
+      normaInf,
+      normaF,
+      radicalF,
+      norma2,
+      simetrica,
+      ata,
+      autovaloresATA,
+      autovaloresA,
+      rhoATA,
+      rhoA,
+      pasos,
+      desigualdades,
+    };
+  }
+
+  function fraseKappa(titulo, normaA, normaInv, kappa, cifras) {
+    const visibleA = redondear(normaA, cifras);
+    const visibleInv = redondear(normaInv, cifras);
+    const visibleKappa = multiplicar(visibleA, visibleInv);
+    const valor = aNumero(kappa);
+    let lectura = "criterio";
+    let cierre = "";
+    if (valor <= 2) {
+      lectura = "bien";
+      cierre = " Este valor está cerca de 1: la matriz está bien condicionada.";
+    } else if (valor >= 1000) {
+      lectura = "mal";
+      cierre = " Este valor cumple κ ≫ 1: la matriz está mal condicionada.";
+    }
+    return {
+      titulo,
+      normaA,
+      normaInv,
+      kappa,
+      lectura,
+      frase:
+        titulo +
+        " = " +
+        recortar(visibleA, cifras) +
+        " × " +
+        recortar(visibleInv, cifras) +
+        " = " +
+        recortar(visibleKappa, cifras) +
+        ". Una matriz está bien condicionada si κ está cerca de 1 y mal condicionada si κ ≫ 1." +
+        cierre,
+    };
+  }
+
+  function analizarDefinida(matriz, vector, cifras, normas) {
+    const simetrica = normas.simetrica;
+    const txt = (valor) => recortar(valor, cifras);
+    if (!simetrica) {
+      return {
+        lectura: "no-simetrica",
+        frase: "La presentación define la matriz definida positiva para una matriz simétrica. Esta matriz no es simétrica.",
+        menores: [],
+        pares: [],
+        diagonal: "",
+        mayor: "",
+        forma: "",
+        autovalores: "",
+      };
+    }
+    const menores = [];
+    for (let k = 1; k <= matriz.length; k += 1) {
+      const valor = determinanteMatriz(principal(matriz, k));
+      const texto =
+        "Δ" +
+        subindice(k) +
+        " = " +
+        txt(valor) +
+        (valor > 0n ? " > 0." : valor === 0n ? " = 0." : " < 0.");
+      menores.push({ k, valor, texto });
+    }
+    const pares = [];
+    for (let i = 0; i < matriz.length; i += 1) {
+      for (let j = i + 1; j < matriz.length; j += 1) {
+        const cumple = matriz[i][j] * matriz[i][j] < matriz[i][i] * matriz[j][j];
+        const marca = "a" + subindice(i + 1) + subindice(j + 1);
+        const di = "a" + subindice(i + 1) + subindice(i + 1);
+        const dj = "a" + subindice(j + 1) + subindice(j + 1);
+        pares.push(
+          marca +
+            "² = " +
+            txt(multiplicar(matriz[i][j], matriz[i][j])) +
+            " y " +
+            di +
+            "·" +
+            dj +
+            " = " +
+            txt(multiplicar(matriz[i][i], matriz[j][j])) +
+            ". " +
+            (cumple ? "Se cumple " : "No se cumple ") +
+            marca +
+            "² < " +
+            di +
+            "·" +
+            dj +
+            "."
+        );
+      }
+    }
+    const negativas = [];
+    for (let i = 0; i < matriz.length; i += 1) {
+      if (matriz[i][i] <= 0n) {
+        negativas.push("a" + subindice(i + 1) + subindice(i + 1) + " = " + txt(matriz[i][i]) + " ≤ 0.");
+      }
+    }
+    const diagonal = negativas.length
+      ? negativas.join(" ") + " En una matriz definida positiva la diagonal es positiva."
+      : "Todos los elementos de la diagonal son positivos.";
+    let mayorValor = matriz[0][0];
+    for (let i = 0; i < matriz.length; i += 1) {
+      for (let j = 0; j < matriz.length; j += 1) {
+        if (matriz[i][j] > mayorValor) mayorValor = matriz[i][j];
+      }
+    }
+    const enDiagonal = matriz.some((fila, i) => fila[i] === mayorValor);
+    const mayor =
+      "El mayor elemento es " +
+      txt(mayorValor) +
+      (enDiagonal ? " y está en la diagonal principal." : " y queda fuera de la diagonal principal.");
+    const nulo = vector.every((componente) => componente === 0n);
+    let forma = "x⁰ es el vector cero. La definición usa vectores distintos de cero.";
+    let contraejemplo = false;
+    if (!nulo) {
+      const valor = formaCuadratica(matriz, vector);
+      const componentes = "(" + vector.map((componente) => txt(componente)).join(", ") + ")";
+      if (valor > 0n) {
+        forma =
+          "Para x⁰ = " +
+          componentes +
+          ", xᵀAx = " +
+          txt(valor) +
+          " > 0. La definición pide que esto ocurra para todo vector distinto de cero.";
+      } else {
+        contraejemplo = true;
+        forma =
+          "Para x⁰ = " +
+          componentes +
+          ", xᵀAx = " +
+          txt(valor) +
+          (valor === 0n ? " = 0." : " < 0.") +
+          " Por la definición, la matriz no es definida positiva.";
+      }
+    }
+    const autovalores =
+      normas.autovaloresA.length === matriz.length
+        ? "Autovalores de A: " +
+          normas.autovaloresA.map(textoLambda).join(", ") +
+          ". Si la matriz es definida positiva, el teorema dice que todos son positivos."
+        : "";
+    let lectura = "no";
+    let frase =
+      "Hay un menor principal que no es positivo. Por el criterio de Sylvester, la matriz no es definida positiva.";
+    if (contraejemplo) {
+      frase = "La forma cuadrática no es positiva para el vector ingresado. Por la definición, la matriz no es definida positiva.";
+    } else if (menores.every((menor) => menor.valor > 0n)) {
+      lectura = "si";
+      frase = "Todos los menores principales son positivos. Por el criterio de Sylvester, la matriz es definida positiva.";
+    }
+    return { lectura, frase, menores, pares, diagonal, mayor, forma, autovalores };
+  }
+
+  function analizarNormas(matriz, vectores, cifras) {
+    const digitos = Number.isInteger(cifras) ? cifras : 8;
+    const txt = (valor) => recortar(valor, digitos);
+    const descritos = vectores.map((dato) => {
+      const absolutos = dato.vector.map(absoluto);
+      const norma1 = absolutos.reduce((suma, valor) => suma + valor, 0n);
+      const cuadrados = dato.vector.map((valor) => multiplicar(valor, valor));
+      const sumaCuadrados = cuadrados.reduce((suma, valor) => suma + valor, 0n);
+      const norma2 = raiz(sumaCuadrados);
+      const radical2 = radicalDeSuma(sumaCuadrados);
+      const normaInf = absolutos.reduce((maximo, valor) => (valor > maximo ? valor : maximo), 0n);
+      return {
+        nombre: dato.nombre,
+        norma1,
+        norma2,
+        normaInf,
+        radical2,
+        pasos: [
+          "‖" + dato.nombre + "‖₁ = " + absolutos.map(txt).join(" + ") + " = " + txt(norma1),
+          "‖" +
+            dato.nombre +
+            "‖₂ = √(" +
+            cuadrados.map(txt).join(" + ") +
+            ") = " +
+            (radical2 || txt(norma2)),
+          "‖" + dato.nombre + "‖∞ = max{" + absolutos.map(txt).join(", ") + "} = " + txt(normaInf),
+        ],
+      };
+    });
+    const normas = calcularNormas(matriz, digitos);
+    const determinante = determinanteMatriz(matriz);
+    const inversa = determinante === 0n ? null : invertirMatriz(matriz);
+    const singular = inversa === null;
+    let kappas = [];
+    let fraseSingular = "";
+    if (singular) {
+      fraseSingular = "det(A) = 0. El número de condición se define cuando A es no singular.";
+    } else {
+      const deInversa = calcularNormas(inversa, digitos);
+      const pares = [
+        ["inf", "κ∞(A) = ‖A‖∞ ‖A⁻¹‖∞", normas.normaInf, deInversa.normaInf],
+        ["1", "κ₁(A) = ‖A‖₁ ‖A⁻¹‖₁", normas.norma1, deInversa.norma1],
+        ["F", "κF(A) = ‖A‖F ‖A⁻¹‖F", normas.normaF, deInversa.normaF],
+        ["2", "κ₂(A) = ‖A‖₂ ‖A⁻¹‖₂", normas.norma2, deInversa.norma2],
+      ];
+      kappas = pares
+        .filter((par) => par[2] !== null && par[3] !== null)
+        .map((par) => fraseKappa(par[1], par[2], par[3], multiplicar(par[2], par[3]), digitos));
+      kappas.forEach((kappa) => {
+        kappa.clave = pares.find((par) => par[1] === kappa.titulo)[0];
+      });
+    }
+    const vectorX = (vectores.find((dato) => dato.nombre === "x⁰") || vectores[0]).vector;
+    return {
+      vectores: descritos,
+      ...normas,
+      determinante,
+      inversa,
+      singular,
+      kappas,
+      fraseSingular,
+      dominancia: describirDominancia(matriz),
+      definida: analizarDefinida(matriz, vectorX, digitos, normas),
+    };
+  }
+
   function residuo(matriz, independiente, x) {
     let norma = 0n;
     const vector = matriz.map((fila, i) => {
@@ -696,7 +1238,7 @@
     const rho = rhoValido
       ? valores.reduce((maximo, valor) => Math.max(maximo, Math.hypot(valor.re, valor.im)), 0)
       : null;
-    const dominancia = margenDiagonal(matriz);
+    const dominancia = describirDominancia(matriz);
     const corrida = iterar(matriz, independiente, preparado.original.inicial, preparado.opciones, metodo);
     const ultimo = corrida.historial[corrida.historial.length - 1];
     const comprobacion = residuo(matriz, independiente, ultimo.x);
@@ -725,21 +1267,54 @@
 
   function resolver(entrada) {
     const preparado = prepararSistema(entrada);
+    if (entrada.metodo === "normas") {
+      const matriz = preparado.original.matriz;
+      const propiedades = analizarNormas(
+        matriz,
+        [
+          { nombre: "x⁰", vector: preparado.original.inicial },
+          { nombre: "b", vector: preparado.original.independiente },
+        ],
+        preparado.opciones.decimales
+      );
+      return {
+        modo: "normas",
+        orden: matriz.map((_, indice) => indice),
+        cambio: false,
+        matriz,
+        independiente: preparado.original.independiente,
+        inicial: preparado.original.inicial,
+        opciones: preparado.opciones,
+        dominancia: propiedades.dominancia,
+        propiedades,
+        resultados: [],
+      };
+    }
     const metodos = entrada.metodo === "ambos" ? ["jacobi", "seidel"] : [entrada.metodo];
     if (!metodos.every((metodo) => metodo === "jacobi" || metodo === "seidel")) {
-      throw errorUsuario("Elija Jacobi, Gauss-Seidel o la comparación.");
+      throw errorUsuario("Elija normas, Jacobi, Gauss-Seidel o la comparación.");
     }
-    const dominancia = margenDiagonal(preparado.ordenado.matriz);
+    const inicial = preparado.opciones.redondear
+      ? preparado.original.inicial.map((valor) => redondear(valor, preparado.opciones.decimales))
+      : preparado.original.inicial;
+    const propiedades = analizarNormas(
+      preparado.ordenado.matriz,
+      [
+        { nombre: "x⁰", vector: inicial },
+        { nombre: "b", vector: preparado.ordenado.independiente },
+      ],
+      preparado.opciones.decimales
+    );
     return {
+      modo: "iterativo",
       orden: preparado.ordenado.orden,
       cambio: preparado.ordenado.cambio,
       matriz: preparado.ordenado.matriz,
       independiente: preparado.ordenado.independiente,
-      inicial: preparado.opciones.redondear
-        ? preparado.original.inicial.map((valor) => redondear(valor, preparado.opciones.decimales))
-        : preparado.original.inicial,
+      inicial,
       opciones: preparado.opciones,
-      dominancia,
+      dominancia: propiedades.dominancia,
+      propiedades,
       advertenciaRedondeo:
         preparado.opciones.redondear &&
         10n ** BigInt(ESCALA - preparado.opciones.decimales) > absoluto(preparado.opciones.tolerancia),

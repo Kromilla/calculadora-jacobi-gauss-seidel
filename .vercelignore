@@ -6,3 +6,6 @@ _pptx_math.txt
 _verify.py
 _commit.sh
 .vercel
+.env
+.env.*
+.env.local
