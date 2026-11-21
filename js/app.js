@@ -23,6 +23,29 @@
     return document.querySelector('input[name="metodo"]:checked').value;
   }
 
+  function normaActiva() {
+    const elegido = document.querySelector('input[name="norma"]:checked');
+    return elegido ? elegido.value : "inf";
+  }
+
+  function claveNorma(norma) {
+    if (norma === "1") return "n1";
+    if (norma === "2") return "n2";
+    return "inf";
+  }
+
+  function simboloNorma(norma) {
+    if (norma === "1") return "₁";
+    if (norma === "2") return "₂";
+    return "∞";
+  }
+
+  function nombreNorma(norma) {
+    if (norma === "1") return "norma 1";
+    if (norma === "2") return "norma 2";
+    return "norma infinito";
+  }
+
   function leerMatriz() {
     const n = Number(tamano.value);
     const A = [];
@@ -118,7 +141,7 @@
     return (real || "0") + signo + imag + "i";
   }
 
-  function bloqueEstado(analisis) {
+  function bloqueEstado(analisis, norma) {
     const caja = nodo("div", "estado");
     const ultimo = analisis.historial[analisis.historial.length - 1];
     if (analisis.estado === "converge") {
@@ -127,8 +150,12 @@
         ultimo.k +
         "⁾ − x⁽" +
         (ultimo.k - 1) +
-        "⁾‖∞ < tolerancia en la iteración " +
+        "⁾‖" +
+        simboloNorma(norma) +
+        " < tolerancia en la iteración " +
         ultimo.k +
+        ". La norma de paro es la " +
+        nombreNorma(norma) +
         ".";
       return caja;
     }
@@ -210,13 +237,22 @@
     return seccion;
   }
 
-  function tablaIteraciones(analisis, cifras, tolerancia) {
+  function tablaIteraciones(analisis, cifras, tolerancia, norma) {
     const envoltorio = nodo("div", "contenedor-tabla");
     const tabla = nodo("table", "tabla-num");
     const cabeza = nodo("thead");
     const filaCabeza = nodo("tr");
-    ["k", ...analisis.solucion.map((_, i) => "x" + (i + 1)), "‖Δx‖∞"].forEach((texto) => {
-      filaCabeza.append(nodo("th", "", texto));
+    const clave = claveNorma(norma);
+    const columnas = [
+      { clave: "k", texto: "k" },
+      ...analisis.solucion.map((_, i) => ({ clave: "x", texto: "x" + (i + 1) })),
+      { clave: "n1", texto: "‖Δx‖₁" },
+      { clave: "n2", texto: "‖Δx‖₂" },
+      { clave: "inf", texto: "‖Δx‖∞" },
+    ];
+    columnas.forEach((columna) => {
+      const th = nodo("th", columna.clave === clave ? "elegida" : "", columna.texto);
+      filaCabeza.append(th);
     });
     cabeza.append(filaCabeza);
     tabla.append(cabeza);
@@ -228,12 +264,15 @@
       }
       fila.append(nodo("td", "", String(paso.k)));
       paso.x.forEach((valor) => fila.append(nodo("td", "", fmt(valor, cifras, true))));
-      if (paso.error === null) fila.append(nodo("td", "", "—"));
-      else {
-        const celda = nodo("td", "", fmt(paso.error, cifras, true));
-        if (paso.error < tolerancia) celda.classList.add("cumple");
+      ["n1", "n2", "inf"].forEach((cual) => {
+        if (!paso.normas) {
+          fila.append(nodo("td", cual === clave ? "elegida" : "", "—"));
+          return;
+        }
+        const celda = nodo("td", cual === clave ? "elegida" : "", fmt(paso.normas[cual], cifras, true));
+        if (cual === clave && paso.normas[cual] < tolerancia) celda.classList.add("cumple");
         fila.append(celda);
-      }
+      });
       cuerpo.append(fila);
     });
     tabla.append(cuerpo);
@@ -301,6 +340,7 @@
 
   function bloqueMetodo(analisis, salida) {
     const cifras = salida.opciones.decimales;
+    const norma = salida.opciones.norma || "inf";
     const bloque = nodo("article", "bloque");
     const cabeza = nodo("div", "bloque-cabeza");
     cabeza.append(nodo("h2", "", tituloMetodo(analisis.metodo)));
@@ -312,7 +352,7 @@
       )
     );
     bloque.append(cabeza);
-    bloque.append(bloqueEstado(analisis));
+    bloque.append(bloqueEstado(analisis, norma));
     const solucion = nodo("p");
     solucion.append(nodo("strong", "", "Aproximación: "));
     solucion.append(
@@ -327,7 +367,9 @@
         "texto-corto",
         "Comprobación ‖Ax − b‖∞ = " +
           fmt(analisis.residuo.norma, cifras, true) +
-          ". El paro del curso no usa el residuo; usa la diferencia entre iteraciones."
+          ". El paro no usa el residuo. Usa la " +
+          nombreNorma(norma) +
+          " de la diferencia entre iteraciones."
       )
     );
 
@@ -369,10 +411,12 @@
       nodo(
         "p",
         "texto-corto",
-        "En cada fila, ‖Δx‖∞ es la norma infinito frente a la iteración anterior."
+        "En cada fila están las tres normas de la diferencia con la iteración anterior. La columna resaltada es la " +
+          nombreNorma(norma) +
+          ", y el proceso se detiene cuando esa norma baja de la tolerancia."
       )
     );
-    bloque.append(tablaIteraciones(analisis, cifras, salida.opciones.tolerancia));
+    bloque.append(tablaIteraciones(analisis, cifras, salida.opciones.tolerancia, norma));
     return bloque;
   }
 
@@ -442,16 +486,16 @@
       const series = [
         {
           color: "#0f4f4c",
-          puntos: jacobi.historial.filter((paso) => paso.error !== null).map((paso) => ({
+          puntos: jacobi.historial.filter((paso) => paso.paro !== null).map((paso) => ({
             k: paso.k,
-            error: Metodos.aNumero(paso.error),
+            error: Metodos.aNumero(paso.paro),
           })),
         },
         {
           color: "#8a4632",
-          puntos: seidel.historial.filter((paso) => paso.error !== null).map((paso) => ({
+          puntos: seidel.historial.filter((paso) => paso.paro !== null).map((paso) => ({
             k: paso.k,
-            error: Metodos.aNumero(paso.error),
+            error: Metodos.aNumero(paso.paro),
           })),
         },
       ];
@@ -465,7 +509,7 @@
         a.querySelector(".punto").style.background = "#0f4f4c";
         b.querySelector(".punto").style.background = "#8a4632";
         leyenda.append(a, b);
-        comparacion.append(nodo("h3", "", "Error por iteración"));
+        comparacion.append(nodo("h3", "", "Norma de paro por iteración"));
         comparacion.append(leyenda);
         comparacion.append(dibujo);
       }
@@ -476,13 +520,13 @@
         {
           color: analisis.metodo === "jacobi" ? "#0f4f4c" : "#8a4632",
           puntos: analisis.historial
-            .filter((paso) => paso.error !== null)
-            .map((paso) => ({ k: paso.k, error: Metodos.aNumero(paso.error) })),
+            .filter((paso) => paso.paro !== null)
+            .map((paso) => ({ k: paso.k, error: Metodos.aNumero(paso.paro) })),
         },
       ]);
       if (dibujo) {
         const bloque = nodo("article", "bloque");
-        bloque.append(nodo("h2", "", "Caída del error"));
+        bloque.append(nodo("h2", "", "Caída de la norma de paro"));
         bloque.append(dibujo);
         resultado.append(bloque);
       }
@@ -506,6 +550,7 @@
         maxIter: Number(document.getElementById("maximo").value),
         reordenar: document.getElementById("reordenar").checked,
         redondear: document.getElementById("redondear").checked,
+        norma: normaActiva(),
       });
       pintar(salida);
     } catch (error) {
@@ -537,6 +582,7 @@
     document.getElementById("reordenar").checked = true;
     document.getElementById("redondear").checked = true;
     document.querySelector('input[name="metodo"][value="ambos"]').checked = true;
+    document.querySelector('input[name="norma"][value="inf"]').checked = true;
     calcular();
   });
 

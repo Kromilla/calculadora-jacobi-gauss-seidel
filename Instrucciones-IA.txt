@@ -191,3 +191,16 @@ menores que 1.
 
 - index.html, junto con las carpetas css y js
 - Este archivo: Instrucciones-IA.txt
+
+
+7. Publicación
+
+Repositorio público:
+https://github.com/Kromilla/calculadora-jacobi-gauss-seidel
+
+Sitio desplegado:
+https://calculadora-jacobi-gauss-seidel.vercel.app
+
+El encabezado del programa muestra la Universidad del Magdalena,
+la materia Análisis numérico, el profesor Marlon Hurtado y los
+tres integrantes.

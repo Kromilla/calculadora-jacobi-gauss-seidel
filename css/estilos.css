@@ -153,6 +153,7 @@ fieldset label {
 }
 
 .opciones { background: #f6f1e6; }
+.pista { color: var(--suave); font-size: 0.82rem; font-weight: 400; }
 
 .controles { display: grid; grid-template-columns: 1.2fr 0.8fr 0.9fr; margin-bottom: 4px; }
 
@@ -243,6 +244,7 @@ button:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
   color: var(--suave);
   padding: 6px;
   border-bottom: 1px solid var(--linea);
+  white-space: nowrap;
 }
 .tabla-num td, .mini td {
   text-align: right;
@@ -254,6 +256,13 @@ button:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
 .mini td:first-child, .mini th:first-child { text-align: left; }
 .fila-final { background: var(--ok-claro); }
 .cumple { color: var(--ok); font-weight: 700; }
+.tabla-num th.elegida,
+.contenedor-tabla thead th.elegida {
+  background: #d7ebe7;
+  color: var(--teal);
+}
+.tabla-num td.elegida { background: #eef6f4; }
+.fila-final td.elegida { background: #d7eddf; }
 .contenedor-tabla { max-height: 460px; overflow: auto; border: 1px solid var(--linea); border-radius: 12px; }
 .contenedor-tabla thead th { position: sticky; top: 0; background: #f7f1e6; }
 

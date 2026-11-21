@@ -2,7 +2,10 @@
    Reglas del curso (sistemas lineales, partes 2 y 3):
    - Jacobi usa solo la iteración anterior.
    - Gauss-Seidel usa de inmediato cada componente nueva.
-   - Paro: norma infinito entre dos iteraciones consecutivas.
+   - En cada iteración se calculan las normas 1, 2 e infinito
+     de la diferencia entre dos iteraciones consecutivas.
+   - El paro usa la norma elegida. Por defecto, la norma infinito:
+     ||x^(k) - x^(k-1)||_inf < tolerancia.
    - Redondeo half away from zero en cada componente nueva.
    - Converge para cualquier x0 si A es estrictamente diagonal
      dominante o si el radio espectral de T es menor que 1.
@@ -90,6 +93,43 @@
 
   function absoluto(a) {
     return a < 0n ? -a : a;
+  }
+
+  function raizEntera(valor) {
+    if (valor <= 0n) return 0n;
+    let x = valor;
+    let y = (x + 1n) / 2n;
+    while (y < x) {
+      x = y;
+      y = (x + valor / x) / 2n;
+    }
+    const resto = valor - x * x;
+    if (resto * 4n >= x * 4n + 1n) return x + 1n;
+    return x;
+  }
+
+  function normasDiferencia(siguiente, anterior) {
+    let suma = 0n;
+    let sumaCuadrados = 0n;
+    let infinito = 0n;
+    for (let i = 0; i < siguiente.length; i += 1) {
+      const delta = absoluto(restar(siguiente[i], anterior[i]));
+      suma += delta;
+      sumaCuadrados += multiplicar(delta, delta);
+      if (delta > infinito) infinito = delta;
+    }
+    return { n1: suma, n2: raizEntera(sumaCuadrados * UNO), inf: infinito };
+  }
+
+  function normaElegida(entrada) {
+    if (entrada.norma === undefined || entrada.norma === null || String(entrada.norma).trim() === "") {
+      return "inf";
+    }
+    const texto = String(entrada.norma).trim().toLowerCase();
+    if (texto === "1" || texto === "n1") return "1";
+    if (texto === "2" || texto === "n2") return "2";
+    if (texto === "inf" || texto === "infinito" || texto === "∞") return "inf";
+    throw errorUsuario("Elija la norma 1, la norma 2 o la norma infinito.");
   }
 
   function redondear(a, cifras) {
@@ -505,6 +545,8 @@
         k: 0,
         x: x.slice(),
         error: null,
+        normas: null,
+        paro: null,
       },
     ];
     let estado = "maximo";
@@ -525,19 +567,21 @@
         if (absoluto(nuevo) > limiteMagnitud) explota = true;
         siguiente[i] = nuevo;
       }
-      let error = 0n;
-      for (let i = 0; i < n; i += 1) {
-        const delta = absoluto(restar(siguiente[i], anterior[i]));
-        if (delta > error) error = delta;
-      }
-      if (opciones.redondear) error = redondear(error, cifras);
+      const crudas = normasDiferencia(siguiente, anterior);
+      const normas = {
+        n1: opciones.redondear ? redondear(crudas.n1, cifras) : crudas.n1,
+        n2: opciones.redondear ? redondear(crudas.n2, cifras) : crudas.n2,
+        inf: opciones.redondear ? redondear(crudas.inf, cifras) : crudas.inf,
+      };
+      const error = normas.inf;
+      const paro = opciones.norma === "1" ? normas.n1 : opciones.norma === "2" ? normas.n2 : normas.inf;
       x = siguiente;
-      historial.push({ k, x: x.slice(), error });
+      historial.push({ k, x: x.slice(), error, normas, paro });
       if (explota) {
         estado = "diverge";
         break;
       }
-      if (error < tope) {
+      if (paro < tope) {
         estado = "converge";
         break;
       }
@@ -595,6 +639,7 @@
         maxIter,
         tolerancia,
         redondear: Boolean(entrada.redondear),
+        norma: normaElegida(entrada),
       },
     };
   }
