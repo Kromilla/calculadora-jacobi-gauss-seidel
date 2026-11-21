@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calculadora Jacobi y Gauss-Seidel</title>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <header class="cabecera">
+    <p class="materia">Universidad del Magdalena · Análisis numérico</p>
+    <h1>Jacobi y Gauss-Seidel</h1>
+    <p class="profesor">Profesor Marlon Hurtado</p>
+    <ul class="integrantes">
+      <li>Carlos Alfredo Ibañez Ortiz</li>
+      <li>Adriana Carolina Olivares Vásquez</li>
+      <li>Yineth Ávila Villalobos</li>
+    </ul>
+    <p class="bajada">
+      Resuelve Ax = b con las reglas del curso: reordena ecuaciones,
+      redondea cada componente nueva y se detiene con la norma infinito.
+    </p>
+  </header>
+
+  <main class="pagina">
+    <form id="panel" class="panel" autocomplete="off">
+      <div class="panel-cabeza">
+        <h2>Sistema</h2>
+        <label class="tamano">
+          Ecuaciones
+          <input id="tamano" type="number" min="2" max="8" value="3">
+        </label>
+      </div>
+      <div id="grilla"></div>
+
+      <fieldset>
+        <legend>Método</legend>
+        <label><input type="radio" name="metodo" value="jacobi"> Jacobi</label>
+        <label><input type="radio" name="metodo" value="seidel" checked> Gauss-Seidel</label>
+        <label><input type="radio" name="metodo" value="ambos"> Comparar ambos</label>
+      </fieldset>
+
+      <div class="controles">
+        <label>
+          Tolerancia
+          <input id="tolerancia" value="0.001" inputmode="decimal">
+        </label>
+        <label>
+          Cifras decimales
+          <input id="decimales" type="number" min="0" max="10" value="4">
+        </label>
+        <label>
+          Iteraciones máximas
+          <input id="maximo" type="number" min="1" max="500" value="100">
+        </label>
+      </div>
+
+      <fieldset class="opciones">
+        <label>
+          <input id="reordenar" type="checkbox" checked>
+          Reordenar ecuaciones para la diagonal
+        </label>
+        <label>
+          <input id="redondear" type="checkbox" checked>
+          Redondear cada componente nueva
+        </label>
+      </fieldset>
+
+      <div class="acciones">
+        <button type="submit" class="principal">Calcular</button>
+        <button type="button" id="ejemplo">Ejemplo del curso</button>
+        <button type="button" id="limpiar" class="secundario">Limpiar</button>
+      </div>
+
+      <details class="reglas">
+        <summary>Reglas que aplica la calculadora</summary>
+        <ul>
+          <li>Jacobi arma el vector nuevo solo con la iteración anterior.</li>
+          <li>Gauss-Seidel usa cada componente en cuanto la calcula.</li>
+          <li>El paro es ‖x⁽ᵏ⁾ − x⁽ᵏ⁻¹⁾‖∞ &lt; tolerancia.</li>
+          <li>El redondeo es a las cifras pedidas, con el empate alejándose de cero.</li>
+          <li>Hay convergencia para cualquier x⁰ si A es estrictamente diagonal dominante o si ρ(T) &lt; 1.</li>
+          <li>T<sub>J</sub> = −D⁻¹(L + U) y T<sub>G</sub> = −(D + L)⁻¹U.</li>
+        </ul>
+      </details>
+    </form>
+
+    <section id="resultado" class="resultado" aria-live="polite">
+      <p class="vacio">Escriba el sistema o cargue el ejemplo del curso.</p>
+    </section>
+  </main>
+
+  <script src="js/solver.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

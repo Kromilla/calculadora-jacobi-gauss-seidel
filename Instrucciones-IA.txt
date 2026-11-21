@@ -1,0 +1,193 @@
+PRÁCTICA COMPUTACIONAL 1
+Solución de sistemas de ecuaciones lineales
+Métodos de Jacobi y Gauss-Seidel
+
+Universidad del Magdalena
+Análisis Numérico (G3 - 2026-II)
+Profesor: Marlon Hurtado
+
+Integrantes
+- Carlos Alfredo Ibañez Ortiz
+- Adriana Carolina Olivares Vásquez
+- Yineth Ávila Villalobos
+
+Programa entregado
+Calculadora web (HTML, CSS y JavaScript) que resuelve Ax = b
+con los métodos iterativos de Jacobi y de Gauss-Seidel.
+Archivo principal: index.html
+Lógica: js/solver.js y js/app.js
+Estilos: css/estilos.css
+
+Este documento reúne las instrucciones dadas a la IA para construir
+el programa, las reglas tomadas de las presentaciones del curso y
+las comprobaciones hechas con los ejemplos.
+
+
+1. Instrucciones dadas a la IA
+
+Instrucción 1
+"hola, necesitamos desarollar un proyecto de una calculadora, con
+las siguientes normas jacobi , gauss-seidel , haz la investigacion,
+de las reglas y aplicalas al proyecto Solución Sistemas de
+Ecuaciones Lineales-Parte 2.pptx Solución Sistemas de Ecuaciones
+Lineales-Parte 3.pptx"
+
+La IA debía investigar las reglas de Jacobi y de Gauss-Seidel en
+esas dos presentaciones y aplicarlas en la calculadora.
+
+Instrucción 2
+"ejecuta esta prueba para comfirmar que funciona"
+
+Se adjuntó un sistema escrito a mano:
+
+  5x1 - x2 + x3 = 3
+ -2x1 + 3x2 + 5x3 = -1
+  x1 - 4x2 + 2x3 = 2
+
+Reordenado a mano, para dejar en la diagonal el coeficiente de
+mayor valor absoluto:
+
+  5x1 - x2 + x3 = 3
+  x1 - 4x2 + 2x3 = 2
+ -2x1 + 3x2 + 5x3 = -1
+
+Instrucción 3
+Generar este documento, colocar en el encabezado del programa a los
+integrantes, la universidad, el profesor y la materia, subir el
+proyecto a un repositorio público de Git y desplegarlo en Vercel.
+
+
+2. Reglas tomadas de las presentaciones
+
+Parte 3 (métodos iterativos) y Parte 2 (Gauss-Seidel).
+
+Jacobi
+- De cada ecuación se despeja la incógnita de la diagonal.
+- La componente nueva x_i^(k+1) usa solo valores de la iteración
+  anterior x^(k).
+- Forma matricial: x^(k+1) = T_J x^(k) + c_J
+  T_J = -D^(-1)(L + U)
+  c_J = D^(-1) b
+  A = L + D + U
+
+Gauss-Seidel
+- Es una variante de Jacobi.
+- La componente recién calculada se usa de inmediato en las
+  ecuaciones siguientes.
+  x1^(k+1) usa x^(k)
+  x2^(k+1) usa x1^(k+1) y el resto de x^(k)
+  x3^(k+1) usa x1^(k+1), x2^(k+1) y el resto de x^(k)
+- Forma matricial: x^(k+1) = T_G x^(k) + c_G
+  T_G = -(D + L)^(-1) U
+  c_G = (D + L)^(-1) b
+
+Comunes a los dos métodos
+- Se parte de una aproximación inicial x^(0). En los ejemplos,
+  x^(0) = (0, 0, 0).
+- Antes de iterar se reordenan las ecuaciones para que el
+  coeficiente de mayor valor absoluto de cada fila quede en la
+  diagonal, cuando ese orden es posible.
+- Cada componente nueva se redondea a las cifras pedidas. En los
+  ejemplos del curso, cuatro cifras. El empate se aleja de cero.
+- El proceso se detiene cuando la norma infinito de la diferencia
+  entre dos iteraciones consecutivas es menor que la tolerancia:
+  ||x^(k) - x^(k-1)||_inf < tolerancia
+  En los ejemplos, tolerancia = 10^(-3).
+- El método converge para cualquier x^(0) si se cumple alguna de
+  estas condiciones:
+  a) A es estrictamente diagonal dominante:
+     |a_ii| > suma de |a_ij| con j distinto de i, en cada fila.
+  b) El radio espectral de la matriz de iteración es menor que 1:
+     rho(T) < 1.
+- Puede haber convergencia aunque A no sea estrictamente diagonal
+  dominante. La condición decisiva es rho(T) < 1.
+
+
+3. Cómo quedaron aplicadas en el programa
+
+- La grilla acepta de 2 a 8 ecuaciones.
+- Se puede elegir Jacobi, Gauss-Seidel o la comparación de ambos.
+- Con la reordenación activa, el programa permuta las ecuaciones
+  para llevar a la diagonal los mayores coeficientes.
+- Jacobi calcula el vector nuevo completo con el vector anterior.
+- Gauss-Seidel sustituye cada componente en cuanto la obtiene.
+- El redondeo se aplica a cada componente nueva y al error mostrado.
+- La tabla de iteraciones muestra k, las componentes y ||Δx||_inf.
+- El programa informa si A es estrictamente diagonal dominante,
+  calcula rho(T) y concluye si la convergencia queda garantizada
+  para cualquier aproximación inicial.
+- También muestra las fórmulas despejadas, la primera iteración,
+  T y c.
+
+
+4. Comprobación con el ejemplo del curso
+
+Sistema original
+ -x1 + 2x2 - x3 = 4
+  2x1 - x2 + 3x3 = -3
+ -5x1 + 3x2 + x3 = 0
+
+Orden usado: ecuación 3, 1, 2
+ -5x1 + 3x2 + x3 = 0
+ -x1 + 2x2 - x3 = 4
+  2x1 - x2 + 3x3 = -3
+
+x^(0) = (0, 0, 0), cuatro cifras, tolerancia 0.001.
+
+Jacobi
+- Primera iteración: (0, 2, -1)
+- Se detiene en k = 26
+- Aproximación: (1.0002, 1.9997, -0.9997)
+- Error: 0.0008
+- rho(T_J) = 0.7461
+
+Gauss-Seidel
+- Primera iteración: (0, 2, -0.3333)
+- Se detiene en k = 11
+- Aproximación: (0.9997, 1.9998, -0.9999)
+- Error: 0.0003
+- rho(T_G) = 0.4472
+
+Solución exacta: (1, 2, -1).
+A no es estrictamente diagonal dominante. Los dos radios espectrales
+son menores que 1, así que ambos métodos convergen para cualquier
+x^(0). Gauss-Seidel llega en menos iteraciones.
+Estas tablas coinciden con las de las presentaciones.
+
+
+5. Comprobación con el sistema escrito a mano
+
+Sistema original
+  5x1 - x2 + x3 = 3
+ -2x1 + 3x2 + 5x3 = -1
+  x1 - 4x2 + 2x3 = 2
+
+Orden obtenido por el programa: ecuación 1, 3, 2.
+Coincide con el reordenamiento de la foto:
+  5x1 - x2 + x3 = 3
+  x1 - 4x2 + 2x3 = 2
+ -2x1 + 3x2 + 5x3 = -1
+
+Fórmulas de Jacobi
+  x1^(k+1) = (1/5) x2^(k) - (1/5) x3^(k) + 3/5
+  x2^(k+1) = (1/4) x1^(k) + (1/2) x3^(k) - 1/2
+  x3^(k+1) = (2/5) x1^(k) - (3/5) x2^(k) - 1/5
+
+En Gauss-Seidel, x2 usa x1^(k+1) y x3 usa x1^(k+1) y x2^(k+1).
+
+Con x^(0) = (0, 0, 0), cuatro cifras y tolerancia 0.001:
+- Jacobi se detiene en k = 15:
+  (0.5079, -0.2856, 0.1743)
+- Gauss-Seidel se detiene en k = 8:
+  (0.5078, -0.2856, 0.1745)
+
+Solución exacta: (0.5079, -0.2857, 0.1746).
+La fila 3 cumple |5| = |-2| + |3|, así que A no es estrictamente
+diagonal dominante. rho(T_J) = 0.6054 y rho(T_G) = 0.4, ambos
+menores que 1.
+
+
+6. Archivos para adjuntar
+
+- index.html, junto con las carpetas css y js
+- Este archivo: Instrucciones-IA.txt
