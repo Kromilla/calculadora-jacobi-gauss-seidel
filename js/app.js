@@ -82,7 +82,7 @@
         const entrada = nodo("input");
         entrada.dataset.a = i + "-" + j;
         entrada.setAttribute("aria-label", "coeficiente a" + (i + 1) + (j + 1));
-        entrada.value = datos && datos.A[i] && datos.A[i][j] !== undefined ? datos.A[i][j] : "";
+        entrada.value = datos && datos.A[i] && datos.A[i][j] !== undefined ? datos.A[i][j] : "0";
         entrada.inputMode = "decimal";
         celda.append(entrada);
         fila.append(celda);
@@ -91,7 +91,7 @@
       const entradaB = nodo("input");
       entradaB.dataset.b = String(i);
       entradaB.setAttribute("aria-label", "término independiente " + (i + 1));
-      entradaB.value = datos && datos.b[i] !== undefined ? datos.b[i] : "";
+      entradaB.value = datos && datos.b[i] !== undefined ? datos.b[i] : "0";
       entradaB.inputMode = "decimal";
       celdaB.append(entradaB);
       fila.append(celdaB);
